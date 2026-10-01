@@ -1,0 +1,6 @@
+scheme,bits_per_symbol,bandwidth_over_Rb,bandwidth_efficiency_bits_per_Hz
+BPSK,1,2.0,0.5000
+QPSK,2,2.0,1.0000
+MSK,1,1.5,0.6667
+8-PSK,3,2.0,1.5000
+16-QAM,4,2.0,2.0000
