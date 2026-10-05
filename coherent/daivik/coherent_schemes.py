@@ -15,7 +15,21 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from scipy.special import erfc
 
-from awgn_stub import awgn  # swap for Himanshu's shared module here
+import sys
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+sys.path.insert(0, ROOT)
+from channel.awgn import add_awgn  # shared AWGN module (Himanshu)
+
+
+def awgn(signal, ebn0_db, bits_per_symbol=1, samples_per_bit=1, rng=None):
+    """Thin adapter onto the shared channel.
+
+    Signals here have Es = 1 per symbol. For sampled waveforms (MSK) each
+    sample carries samples_per_bit x the per-sample noise, which is the same
+    as scaling Es by samples_per_bit in add_awgn.
+    """
+    return add_awgn(signal, ebn0_db, bits_per_symbol,
+                    es=1.0 * samples_per_bit, rng=rng)
 
 PLOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "..", "..", "plots")
@@ -435,21 +449,21 @@ def bandwidth_efficiency():
     """
     Bandwidth efficiency eta = Rb / B, in bits/s/Hz, using null-to-null
     (main-lobe-to-main-lobe) bandwidth B:
-      - linear PSK/QAM with rectangular symbol pulses: B = 2*Rs,
-        so eta = Rb/(2*Rs) = k/2
+      - linear PSK/QAM with rectangular symbol pulses: B = 2*Rs = 2*Rb/k,
+        so B/Rb = 2/k and eta = k/2
       - MSK: continuous-phase FSK occupies B = 1.5*Rb null-to-null
         (vs 2*Rb for BFSK), so eta = 1/1.5
     """
     schemes = {
-        "BPSK":   dict(k=1, b_over_rb=2.0),
-        "QPSK":   dict(k=2, b_over_rb=2.0),
+        "BPSK":   dict(k=1, b_over_rb=2.0 / 1),
+        "QPSK":   dict(k=2, b_over_rb=2.0 / 2),
         "MSK":    dict(k=1, b_over_rb=1.5),
-        "8-PSK":  dict(k=3, b_over_rb=2.0),
-        "16-QAM": dict(k=4, b_over_rb=2.0),
+        "8-PSK":  dict(k=3, b_over_rb=2.0 / 3),
+        "16-QAM": dict(k=4, b_over_rb=2.0 / 4),
     }
     table = {}
     for name, d in schemes.items():
-        eta = d["k"] / d["b_over_rb"]
+        eta = 1.0 / d["b_over_rb"]
         table[name] = dict(bits_per_symbol=d["k"],
                            bandwidth_over_rb=d["b_over_rb"],
                            efficiency=eta)
@@ -467,6 +481,18 @@ def save_bandwidth_table(table, path):
 # ---------------------------------------------------------------
 # 8. Entry point
 # ---------------------------------------------------------------
+
+def save_ber_csv(name, ebn0_range, res):
+    """Write plots/data/coherent_<scheme>.csv in the format the comparison script reads."""
+    d = os.path.join(PLOT_DIR, "data")
+    os.makedirs(d, exist_ok=True)
+    fn = "coherent_" + name.lower().replace("-", "") + ".csv"
+    th = SCHEMES[name]["th"](ebn0_range)
+    with open(os.path.join(d, fn), "w", newline="") as f:
+        f.write("ebn0_db,ber_sim,ber_theory,n_errors,n_bits\n")
+        for e, b, t, ne, nb in zip(ebn0_range, res["ber"], th, res["errors"], res["bits"]):
+            f.write(f"{e},{b:.6e},{float(t):.6e},{ne},{nb}\n")
+
 
 def verify_msk_phase():
     bits = np.array([1, 1, 0, 1, 0, 0])
@@ -495,10 +521,12 @@ def main():
     plot_msk_phase([1, 1, 0, 1, 0, 1, 1, 0, 0, 1])
 
     print("Monte Carlo BER sweep (this takes a while)...")
-    ebn0_range, out = run_ber_sweep()
+    max_bits = int(sys.argv[1]) if len(sys.argv) > 1 else 20_000_000   # e.g. 1000000 for a quick run
+    ebn0_range, out = run_ber_sweep(max_bits=max_bits)
 
     print("BER plots...")
     for name in SCHEMES:
+        save_ber_csv(name, ebn0_range, out[name])
         plot_ber_per_scheme(name, ebn0_range, out[name])
     plot_ber_combined(ebn0_range, out)
     plot_ber_vs_order(8.0)
@@ -508,7 +536,7 @@ def main():
     print("\nBandwidth efficiency (bits/s/Hz, null-to-null bandwidth):")
     print(f"  {'scheme':<8} {'bits/sym':>9} {'B/Rb':>6} {'eta':>7}")
     for name, d in table.items():
-        print(f"  {name:<8} {d['bits_per_symbol']:>9} {d['bandwidth_over_rb']:>6} "
+        print(f"  {name:<8} {d['bits_per_symbol']:>9} {d['bandwidth_over_rb']:>6.3f} "
               f"{d['efficiency']:>7.3f}")
     save_bandwidth_table(table, os.path.join(PLOT_DIR, "bandwidth_efficiency.csv"))
 
