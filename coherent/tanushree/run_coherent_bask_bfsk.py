@@ -1,7 +1,7 @@
 """
 Run the coherent BASK / BFSK simulations, save CSVs and the BER plot.
 
-    python coherent/run_coherent_bask_bfsk.py        # from the repo root
+    python coherent/tanushree/run_coherent_bask_bfsk.py        # from the repo root
 
 Outputs
     plots/data/coherent_bask.csv, coherent_bfsk.csv   (read by compare_coherent_vs_noncoherent.py)
@@ -12,7 +12,7 @@ import csv
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import matplotlib
@@ -21,8 +21,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from channel.awgn import get_rng
-from coherent import gs_signal_space
-from coherent.coherent_bask_bfsk import (SCHEMES, coherent_trial, simulate_curve,
+from coherent.tanushree import gs_signal_space
+from coherent.tanushree.coherent_bask_bfsk import (SCHEMES, coherent_trial, simulate_curve,
                                          simulate_point, waveform_trial)
 
 EBN0_DB = np.arange(0, 13, 1.0)      # 0 to 12 dB, as in the project plan

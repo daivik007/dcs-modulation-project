@@ -2,7 +2,7 @@
 Gram-Schmidt orthogonalization and signal-space diagrams for BASK, BFSK, BPSK, QPSK
 (owner: Tanushree Paidi).
 
-    python coherent/gs_signal_space.py        # from the repo root
+    python coherent/tanushree/gs_signal_space.py        # from the repo root
 
 Everything is computed numerically on sampled waveforms, so the basis functions
 plotted here are exactly the ones the correlator receiver projects onto.
@@ -19,7 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PLOTS = ROOT / "plots"
 
 # ---- waveform parameters (normalised: Rb = 1 bit/s) ---------------------------
