@@ -410,17 +410,33 @@ def plot_ber_combined(ebn0_range, out):
     plt.savefig(os.path.join(PLOT_DIR, "ber_combined.png"), dpi=150)
     plt.close()
 
-def plot_ber_vs_order(ebn0_db=8.0):
+def plot_ber_vs_order(ebn0_db=8.0, seed=1234, min_errors=1000):
+    """Theory (line) and Monte Carlo (markers) at one Eb/N0.
+
+    min_errors=1000 keeps the relative standard error near 3%.
+    Also writes plots/ber_vs_modulation_order.csv.
+    """
     os.makedirs(PLOT_DIR, exist_ok=True)
     order = ["BPSK", "QPSK", "8-PSK", "16-QAM"]
-    th = [SCHEMES[n]["th"](ebn0_db) for n in order]
+    th = [float(SCHEMES[n]["th"](ebn0_db)) for n in order]
+    rng = np.random.default_rng(seed)
+    sim, errs, nbits = [], [], []
+    for n in order:
+        b, ne, nt = mc_ber(n, ebn0_db, rng, min_errors, 50_000_000)
+        sim.append(b); errs.append(ne); nbits.append(nt)
+    with open(os.path.join(PLOT_DIR, "ber_vs_modulation_order.csv"), "w") as f:
+        f.write("scheme,ebn0_db,ber_sim,ber_theory,n_errors,n_bits\n")
+        for n, s, t, ne, nt in zip(order, sim, th, errs, nbits):
+            f.write(f"{n},{ebn0_db},{s:.6e},{t:.6e},{ne},{nt}\n")
     plt.figure(figsize=(6, 4.5))
-    plt.semilogy(range(len(order)), th, "o-", lw=1.5)
+    plt.semilogy(range(len(order)), th, "-", lw=1.5, label="theoretical")
+    plt.semilogy(range(len(order)), sim, "o", ms=6, label="simulated")
     plt.xticks(range(len(order)), order)
     plt.xlabel("modulation order")
     plt.ylabel("BER")
-    plt.title(f"Theoretical BER vs modulation order at Eb/N0 = {ebn0_db} dB")
+    plt.title(f"BER vs modulation order at Eb/N0 = {ebn0_db} dB")
     plt.grid(True, which="both", alpha=0.4)
+    plt.legend()
     plt.tight_layout()
     plt.savefig(os.path.join(PLOT_DIR, "ber_vs_modulation_order.png"), dpi=150)
     plt.close()

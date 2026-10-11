@@ -115,7 +115,25 @@ def plot_constellation(ax, name, coords, labels):
     ax.grid(alpha=0.3)
 
 
+PLOT_SPS = 400       # fine grid used only for the derivation and plots
+
+
 def main():
+    """Run the derivation on a fine time grid so the basis plots are smooth.
+
+    The simulations import SPS (20 samples per bit); that value is restored
+    on exit so they are unaffected.
+    """
+    global SPS
+    old_sps = SPS
+    SPS = PLOT_SPS
+    try:
+        _main()
+    finally:
+        SPS = old_sps
+
+
+def _main():
     names = ["BASK", "BFSK", "BPSK", "QPSK"]
     fig_c, axc = plt.subplots(1, 4, figsize=(16, 4))
     fig_b, axb = plt.subplots(4, 2, figsize=(11, 9))
